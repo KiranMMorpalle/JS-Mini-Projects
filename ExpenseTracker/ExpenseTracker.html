@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Expense Tracker (Advanced)</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f2f2f2;
+      padding-top: 30px;
+      display: flex;
+      justify-content: center;
+    }
+    #app {
+      background: #fff;
+      padding: 20px;
+      width: 420px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    input, select {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      background: green;
+      color: white;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 15px;
+    }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .income { color: green; }
+    .expense { color: red; }
+    .summary {
+      margin-top: 15px;
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 6px;
+    }
+    .small {
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h2>📘 Expense Tracker</h2>
+
+    <input type="text" id="desc" placeholder="Description" />
+    <input type="number" id="amount" placeholder="Amount (₹)" />
+    <select id="type">
+      <option value="income">Income</option>
+      <option value="expense">Expense</option>
+    </select>
+    <select id="category">
+      <option value="Others">Others</option>
+      <option value="Food">Food</option>
+      <option value="Rent">Rent</option>
+      <option value="Travel">Travel</option>
+    </select>
+    <button onclick="addTransaction()">➕ Add Transaction</button>
+
+    <ul id="transactionList"></ul>
+
+    <div class="summary">
+      <p>Total Income: ₹<span id="incomeTotal">0</span></p>
+      <p>Total Expense: ₹<span id="expenseTotal">0</span></p>
+      <p><strong>Balance: ₹<span id="balanceTotal">0</span></strong></p>
+      <hr />
+      <p><strong>Last 7 Days Summary</strong></p>
+      <p>Recent Income: ₹<span id="recentIncome">0</span></p>
+      <p>Recent Expense: ₹<span id="recentExpense">0</span></p>
+    </div>
+  </div>
+
+  <script>
+    const desc = document.getElementById("desc");
+    const amount = document.getElementById("amount");
+    const type = document.getElementById("type");
+    const category = document.getElementById("category");
+    const list = document.getElementById("transactionList");
+    const incomeTotal = document.getElementById("incomeTotal");
+    const expenseTotal = document.getElementById("expenseTotal");
+    const balanceTotal = document.getElementById("balanceTotal");
+    const recentIncome = document.getElementById("recentIncome");
+    const recentExpense = document.getElementById("recentExpense");
+
+    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+    function addTransaction() {
+      const description = desc.value.trim();
+      const amt = parseFloat(amount.value);
+      const transType = type.value;
+      const transCat = category.value;
+      const transDate = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+
+      if (!description || isNaN(amt)) {
+        alert("Please enter valid description and amount.");
+        return;
+      }
+
+      const transaction = {
+        id: Date.now(),
+        description,
+        amount: amt,
+        type: transType,
+        category: transCat,
+        date: transDate
+      };
+
+      transactions.push(transaction);
+      saveAndUpdate();
+      desc.value = "";
+      amount.value = "";
+    }
+
+    function deleteTransaction(id) {
+      transactions = transactions.filter(tx => tx.id !== id);
+      saveAndUpdate();
+    }
+
+    function saveAndUpdate() {
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+      updateUI();
+    }
+
+    function updateUI() {
+      list.innerHTML = "";
+
+      transactions.forEach(tx => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div>
+            <strong>${tx.description}</strong> 
+            <div class="small">${tx.category} | ${tx.date}</div>
+          </div>
+          <div>
+            <span class="${tx.type}">₹${tx.amount}</span>
+            <button onclick="deleteTransaction(${tx.id})">❌</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+
+      const incomes = transactions.filter(tx => tx.type === "income").map(tx => tx.amount);
+      const expenses = transactions.filter(tx => tx.type === "expense").map(tx => tx.amount);
+
+      const totalIncome = incomes.reduce((a, b) => a + b, 0);
+      const totalExpense = expenses.reduce((a, b) => a + b, 0);
+      const balance = totalIncome - totalExpense;
+
+      incomeTotal.textContent = totalIncome.toFixed(2);
+      expenseTotal.textContent = totalExpense.toFixed(2);
+      balanceTotal.textContent = balance.toFixed(2);
+
+      // Filter by last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const recentTx = transactions.filter(tx => new Date(tx.date) >= sevenDaysAgo);
+      const recentIncomes = recentTx.filter(tx => tx.type === "income").map(tx => tx.amount);
+      const recentExpenses = recentTx.filter(tx => tx.type === "expense").map(tx => tx.amount);
+
+      recentIncome.textContent = recentIncomes.reduce((a, b) => a + b, 0).toFixed(2);
+      recentExpense.textContent = recentExpenses.reduce((a, b) => a + b, 0).toFixed(2);
+    }
+
+    updateUI(); // initial call on page load
+  </script>
+</body>
+</html>
